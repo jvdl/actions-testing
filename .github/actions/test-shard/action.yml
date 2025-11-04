@@ -31,10 +31,11 @@ runs:
     - name: Run Vitest tests
       if: ${{ inputs.runner == 'vitest' }}
       shell: bash
-      run: npm run test:ci -- --shard ${{ inputs.shard }}/${{ inputs.total }}
+      run: npm run test:ci -- --shard ${{ inputs.shard }}/${{ inputs.total }} --outputFile ../test-results/ui-${{ inputs.runner }}-${{ inputs.shard }}-of-${{ inputs.total }}.xml
     - name: Upload test results
       if: ${{ !cancelled() }}
       uses: actions/upload-artifact@v5
       with:
         name: test-results-${{ inputs.runner }}-${{ inputs.shard }}
-        path: test-results/ui-*-junit.xml
+        path: test-results/ui-*.xml
+        retention-days: 14

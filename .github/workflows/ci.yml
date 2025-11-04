@@ -21,14 +21,6 @@ jobs:
           shard: ${{ matrix.shard }}
           total: ${{ matrix.total }}
           runner: vitest
-      # - name: Test Report
-      #   uses: dorny/test-reporter@v2
-      #   if: ${{ !cancelled() }} # run this step even if previous step failed
-      #   with:
-      #     name: Vitest Report ${{ matrix.shard }}
-      #     path: test-results/ui-vitest-junit.xml
-      #     reporter: jest-junit
-      #     only-summary: true
 
   test-report:
     needs: vitest
@@ -38,8 +30,9 @@ jobs:
       - name: Aggregate Vitest reports
         uses: dorny/test-reporter@v2
         with:
-          name: Vitest Aggregate Report
+          name: Aggregate Test Report
           artifact: /test-results-(.*)/
           reporter: jest-junit
-          only-summary: true
+          list-tests: failed
+          list-suites: failed
           path: "**/*.xml"
