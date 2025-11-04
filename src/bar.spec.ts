@@ -5,4 +5,7 @@ describe("bar", () => {
   it("should return 'bar'", () => {
     expect(bar()).toBe("bar");
   });
+  it("should be something", () => {
+    expect(bar()).toBeDefined();
+  });
 });
