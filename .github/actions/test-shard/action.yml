@@ -1,0 +1,40 @@
+name: "Test"
+description: "Test JS/TS"
+inputs:
+  shard: # id of input
+    description: "The shard to test, e.g. 1"
+    required: true
+  total: # total number of shards
+    description: "The total number of shards, e.g. 3"
+    required: true
+  runner: # which runner to use
+    description: "The runner to use, either jest or vitest"
+    required: true
+
+runs:
+  using: "composite"
+  steps:
+    - uses: actions/checkout@v5
+    - name: Setup Node
+      uses: actions/setup-node@v6
+      with:
+        node-version-file: .nvmrc
+        cache: "npm"
+        cache-dependency-path: package-lock.json
+    - name: Install deps
+      shell: bash
+      run: npm install
+    - name: Run Jest tests
+      if: ${{ inputs.runner == 'jest' }}
+      shell: bash
+      run: npm run test:ci -- --shard ${{ inputs.shard }}/${{ inputs.total }}
+    - name: Run Vitest tests
+      if: ${{ inputs.runner == 'vitest' }}
+      shell: bash
+      run: npm run test:ci -- --shard ${{ inputs.shard }}/${{ inputs.total }}
+    - name: Upload test results
+      if: ${{ !cancelled() }}
+      uses: actions/upload-artifact@v5
+      with:
+        name: test-results-${{ inputs.runner }}-${{ inputs.shard }}
+        path: test-results/ui-*-junit.xml
