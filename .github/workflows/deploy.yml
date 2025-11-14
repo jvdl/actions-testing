@@ -1,0 +1,60 @@
+name: "Deployment"
+
+on:
+  workflow_dispatch:
+    inputs:
+      env:
+        description: "Environment to deploy to"
+        required: true
+        default: "dev"
+        type: choice
+        options:
+          - dev
+          - staging
+          - demo
+          - pre-prod
+          - production
+      release_type:
+        description: "Release type (anything other than SNAPSHOT will bump versions, create git tags, etc.)"
+        required: false
+        default: "SNAPSHOT"
+        type: choice
+        options:
+          - SNAPSHOT
+          - patch
+          - minor
+          - major
+
+run-name: "Deployment to ${{ inputs.env }}"
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Perform Release
+        if: ${{ inputs.release_type != 'SNAPSHOT' }}
+        run: echo "Performing a ${{ inputs.release_type }} release..."
+        # Add your release logic here (e.g., version bumping, tagging, etc.)
+      - name: Skip Release
+        if: ${{ inputs.release_type == 'SNAPSHOT' }}
+        run: echo "SNAPSHOT release selected; skipping release steps."
+  build:
+    needs: release
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Setup
+        uses: ./.github/actions/setup
+      - name: Install deps
+        run: npm install
+      # - name: Copy env file
+      #   run: mv .env.development .env.production
+      - name: Build
+        run: npm run build
+      - name: Upload results
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v5
+        with:
+          name: deployment-result-${{ github.run_id }}
+          path: dist/*
+          retention-days: 14

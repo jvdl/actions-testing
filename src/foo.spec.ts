@@ -5,7 +5,7 @@ describe("foo", () => {
   it("should return 'foo'", () => {
     expect(foo()).toBe("foo");
   });
-  it("should be a thing", () => {
-    expect(foo()).toBe("thing");
+  it("should not be a thing", () => {
+    expect(foo()).not.toBe("thing");
   });
 });

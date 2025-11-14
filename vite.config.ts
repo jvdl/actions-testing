@@ -13,6 +13,5 @@ export default defineConfig({
     exclude: [...defaultExclude],
     reporters: ["default", ["junit", { suiteName: "vitest", classnameTemplate: "filename:{filename} - filepath:{filepath}" }]],
     outputFile: "../test-results/ui-vitest-junit.xml", // ../ because vitest runs from /src
-    root: "./src",
   },
 });
