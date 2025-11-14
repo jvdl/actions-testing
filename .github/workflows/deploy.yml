@@ -15,12 +15,12 @@ on:
           - pre-prod
           - production
       release_type:
-        description: "Release type (anything other than SNAPSHOT will bump versions, create git tags, etc.)"
+        description: "Release type (anything other than NONE will bump versions, create git tags, etc.)"
         required: false
-        default: "SNAPSHOT"
+        default: "NONE"
         type: choice
         options:
-          - SNAPSHOT
+          - NONE
           - patch
           - minor
           - major
@@ -31,13 +31,20 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
+      - name: Set up Git user
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
       - name: Perform Release
-        if: ${{ inputs.release_type != 'SNAPSHOT' }}
-        run: echo "Performing a ${{ inputs.release_type }} release..."
+        if: ${{ inputs.release_type != 'NONE' }}
+        run: |
+          echo "Performing a ${{ inputs.release_type }} release..."
+          ./etc/release.sh "${{ inputs.release_type }}"
         # Add your release logic here (e.g., version bumping, tagging, etc.)
       - name: Skip Release
-        if: ${{ inputs.release_type == 'SNAPSHOT' }}
-        run: echo "SNAPSHOT release selected; skipping release steps."
+        if: ${{ inputs.release_type == 'NONE' }}
+        run: echo "NONE release selected; skipping release steps."
+
   build:
     needs: release
     runs-on: ubuntu-latest
@@ -58,3 +65,39 @@ jobs:
           name: deployment-result-${{ github.run_id }}
           path: dist/*
           retention-days: 14
+
+  deploy-to-s3:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download build artifact
+        uses: actions/download-artifact@v5
+        with:
+          name: deployment-result-${{ github.run_id }}
+      - name: Deploy to S3
+        run: echo "Deploying to S3 for environment ${{ inputs.env }}..."
+        # Add S3 deployment logic here
+
+  invalidate-cloudfront:
+    needs: deploy-to-s3
+    runs-on: ubuntu-latest
+    steps:
+      - name: Invalidate CloudFront Cache
+        run: echo "Invalidating CloudFront cache for environment ${{ inputs.env }}..."
+        # Add CloudFront invalidation logic here
+
+  post-deployment-mergeback:
+    needs: [build, deploy-to-s3]
+    runs-on: ubuntu-latest
+    # Only run this if we released from a release branch that now needs to be merged back to main
+    if: ${{ !cancelled() && startsWith(github.ref_name, 'release_v') }}
+    steps:
+      - name: Set up Git user
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+      - name: Merge release branch back to master
+        run: |
+          git checkout main
+          git merge "${{ github.ref_name }}" --no-ff -m "Merge ${GITHUB_REF_NAME} back to main"
+          git push origin main
